@@ -1,10 +1,10 @@
 {
-  "name": "koa-json-logger",
-  "version": "1.0.2",
+  "name": "koa-json-logger-next",
+  "version": "2.0.1",
   "description": "KoaJS HTTP Request/Response/Error JSON format logger",
   "repository": {
     "type": "git",
-    "url": "https://github.com/rudijs/koa-json-logger.git"
+    "url": "https://github.com/sjdweb/koa-json-logger.git"
   },
   "main": "./lib/koa-json-logger.js",
   "scripts": {
@@ -28,26 +28,28 @@
     {
       "name": "Jordan Sexton",
       "email": "jordan@jordansexton.com"
+    },
+    {
+      "name": "Sean Drumm",
+      "email": "sean@seandrumm.co.uk"
     }
   ],
   "license": "MIT",
   "engines": {
-    "node": ">=0.11.16",
-    "iojs": ">= 1.0.0"
+    "node": ">=7.0.0"
   },
   "devDependencies": {
     "chai": "^3.4.1",
     "coveralls": "^2.11.6",
     "istanbul-harmony": "^0.3.16",
     "jshint": "^2.9.1",
-    "koa": "^1.1.2",
+    "koa": "^2.2.0",
     "mocha": "^2.3.4",
     "sinon": "^1.17.2",
     "supertest": "^0.15.0"
   },
   "dependencies": {
     "bunyan": "^1.5.1",
-    "lodash": "^4.0.0",
     "uuid": "^2.0.1"
   }
 }

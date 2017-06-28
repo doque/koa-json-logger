@@ -1,3 +1,6 @@
+## FORK of [koa-json-logger](https://github.com/rudijs/koa-json-logger) ##
+**Added support for Koa v2, and prefer stdout/stderr rather than logging to files.**
+
 koa-json-logger
 ===============
 
