@@ -3,7 +3,7 @@
 var should = require('chai').should(),
   request = require('supertest'),
   sinon = require('sinon'),
-  koa = require('koa'),
+  Koa = require('koa'),
   fs = require('fs');
 
 var koaJsonLogger = require('../lib/koa-json-logger'),
@@ -28,7 +28,7 @@ describe('JSON Logger middleware', function () {
   });
 
   beforeEach(function (done) {
-    app = koa();
+    app = new Koa();
     done();
   });
 
@@ -36,12 +36,14 @@ describe('JSON Logger middleware', function () {
 
     it('should log request and response', function (done) {
 
-      app.use(koaJsonLogger());
+      app.use(koaJsonLogger({
+        path: 'log'
+      }));
 
       // default route for test
-      app.use(function *route1(next) {
-        this.body = 'Test Response is OK.';
-        yield next;
+      app.use(async function route1(ctx, next) {
+        ctx.body = 'Test Response is OK.';
+        return await next();
       });
 
       request(app.listen())
@@ -73,12 +75,12 @@ describe('JSON Logger middleware', function () {
             // request logging
             logEntry.req.method.should.equal('GET');
             logEntry.req.url.should.equal('/');
-            should.exist(logEntry.req.headers);
+            should.exist(logEntry.req.header);
 
             // response logging
             logEntry.res.statusCode.should.equal(200);
             should.exist(logEntry.res.responseTime);
-            logEntry.res.headers['content-type'].should.equal('text/plain; charset=utf-8');
+            logEntry.res.header['content-type'].should.equal('text/plain; charset=utf-8');
 
             done();
           });
@@ -93,17 +95,20 @@ describe('JSON Logger middleware', function () {
 
     it('should log request, response and error', function (done) {
 
-      app.use(koaJsonLogger());
+      app.use(koaJsonLogger({
+        path: 'log',
+        json: false
+      }));
 
       // 1st default test route that will catch uncaught downstream errors
-      app.use(function *route1(next) {
-        yield next;
+      app.use(async function route1(ctx, next) {
+        await next();
       });
 
       // 2nd route. Downstream route/middleware that throws an error
-      app.use(function *route2(next) {
-        this.throw('Oops! Something blew up.');
-        yield next;
+      app.use(async function route2(ctx, next) {
+        ctx.throw('Oops! Something blew up.');
+        await next();
       });
 
       request(app.listen())
@@ -136,12 +141,12 @@ describe('JSON Logger middleware', function () {
             // request logging
             logEntry.req.method.should.equal('GET');
             logEntry.req.url.should.equal('/');
-            should.exist(logEntry.req.headers);
+            should.exist(logEntry.req.header);
 
             // response logging
             logEntry.res.statusCode.should.equal(500);
             should.exist(logEntry.res.responseTime);
-            should.exist(logEntry.res.headers);
+            should.exist(logEntry.res.header);
 
             // error logging
             logEntry.err.message.should.match(/Something\ blew\ up/);
@@ -157,14 +162,18 @@ describe('JSON Logger middleware', function () {
 
     it('should display the application error message for non 500 errors', function (done) {
 
-      app.use(koaJsonLogger());
+      app.use(koaJsonLogger({
+        path: 'log',
+        json: false,
+        surfaceErrors: true
+      }));
 
       // 1st default test route that will catch uncaught downstream errors
-      app.use(function *route1(next) {
+      app.use(async function route1(ctx, next) {
 
         // throw a custom application error
-        this.throw(400, 'Bad URL parameter format');
-        yield next;
+        ctx.throw(400, 'Bad URL parameter format');
+        await next();
       });
 
       request(app.listen())
@@ -197,12 +206,12 @@ describe('JSON Logger middleware', function () {
             // request logging
             logEntry.req.method.should.equal('GET');
             logEntry.req.url.should.equal('/');
-            should.exist(logEntry.req.headers);
+            should.exist(logEntry.req.header);
 
             // response logging
             logEntry.res.statusCode.should.equal(400);
             should.exist(logEntry.res.responseTime);
-            should.exist(logEntry.res.headers);
+            should.exist(logEntry.res.header);
 
             // error logging
             logEntry.err.message.should.equal('Bad URL parameter format');
@@ -218,10 +227,13 @@ describe('JSON Logger middleware', function () {
 
     it('should default to 500 error status code', function (done) {
 
-      app.use(koaJsonLogger());
+      app.use(koaJsonLogger({
+        path: 'log',
+        json: false
+      }));
 
-      app.use(function *route1(next) {
-        yield next;
+      app.use(async function route1(ctx, next) {
+        await next();
         throw new Error('Oops! Something blew up.');
       });
 
@@ -255,12 +267,12 @@ describe('JSON Logger middleware', function () {
             // request logging
             logEntry.req.method.should.equal('GET');
             logEntry.req.url.should.equal('/');
-            should.exist(logEntry.req.headers);
+            should.exist(logEntry.req.header);
 
             // response logging
             logEntry.res.statusCode.should.equal(500);
             should.exist(logEntry.res.responseTime);
-            should.exist(logEntry.res.headers);
+            should.exist(logEntry.res.header);
 
             // error logging
             logEntry.err.message.should.match(/Something\ blew\ up/);
@@ -278,15 +290,17 @@ describe('JSON Logger middleware', function () {
 
       // Set the API response to JSON API format
       app.use(koaJsonLogger({
-        jsonapi: true
+        json: true,
+        path: 'log',
+        surfaceErrors: false
       }));
 
       // 1st default test route that will catch uncaught downstream errors
-      app.use(function *route1(next) {
+      app.use(async function route1(ctx, next) {
 
         // throw a custom application error
-        this.throw('Oops! Something blew up.');
-        yield next;
+        ctx.throw('Oops! Something blew up.');
+        await next();
       });
 
       request(app.listen())
@@ -300,7 +314,7 @@ describe('JSON Logger middleware', function () {
 
           // should not leak out internal server error messages on 500
           // standard error response for the user
-          res.text.should.equal('{"status":500,"title":"Internal Server Error"}');
+          res.text.should.equal('{"status":500,"error":"Internal Server Error"}');
 
           // read in log file entry
           fs.readFile('log/app_error.log', function (err, data) {
@@ -319,12 +333,12 @@ describe('JSON Logger middleware', function () {
             // request logging
             logEntry.req.method.should.equal('GET');
             logEntry.req.url.should.equal('/');
-            should.exist(logEntry.req.headers);
+            should.exist(logEntry.req.header);
 
             // response logging
             logEntry.res.statusCode.should.equal(500);
             should.exist(logEntry.res.responseTime);
-            logEntry.res.headers['content-type'].should.equal('application/vnd.api+json');
+            logEntry.res.header['content-type'].should.equal('application/json; charset=utf-8');
 
             // error logging
             logEntry.err.message.should.match(/Something\ blew\ up/);
@@ -337,7 +351,7 @@ describe('JSON Logger middleware', function () {
         });
 
     });
-
+    
     it('should emit conosle errors in development mode only', function (done) {
 
       process.env.NODE_ENV = 'development';
@@ -347,11 +361,11 @@ describe('JSON Logger middleware', function () {
       app.use(koaJsonLogger());
 
       // 1st default test route that will catch uncaught downstream errors
-      app.use(function *route1(next) {
+      app.use(async function route1(ctx, next) {
 
         // throw a custom application error
-        this.throw(400, 'Bad URL parameter format');
-        yield next;
+        ctx.throw(400, 'Bad URL parameter format');
+        await next();
       });
 
       request(app.listen())
@@ -379,9 +393,9 @@ describe('JSON Logger middleware', function () {
       ));
 
       // default route for test
-      app.use(function *route1(next) {
-        this.body = 'Test Response is OK.';
-        yield next;
+      app.use(async function route1(ctx, next) {
+        ctx.body = 'Test Response is OK.';
+        await next();
       });
 
       request(app.listen())
