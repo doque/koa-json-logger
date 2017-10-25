@@ -89,6 +89,46 @@ describe('JSON Logger middleware', function () {
 
     });
 
+    it('should not log request when specified on ctx', function (done) {
+
+      app.use(koaJsonLogger({
+        path: 'log'
+      }));
+
+      // default route for test
+      app.use(async function route1(ctx, next) {
+        ctx.body = 'Test Response is OK. Don\'t log me!';
+        ctx.ignoreRequest = true;
+        return await next();
+      });
+
+      request(app.listen())
+        .get('/')
+        .expect(200)
+        .end(function (err, res) {
+          if (err) {
+            should.not.exist(err);
+            return done(err);
+          }
+
+          // test http response
+          res.text.should.equal('Test Response is OK. Don\'t log me!');
+
+          // read in log file entry
+          fs.readFile('log/app.log', function (err, data) {
+            if (err) {
+              throw err;
+            }
+
+            data.toString().should.be.empty;
+
+            done();
+          });
+
+        });
+
+    });
+
   });
 
   describe('error', function () {
