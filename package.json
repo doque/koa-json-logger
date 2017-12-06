@@ -1,6 +1,6 @@
 {
   "name": "koa-json-logger-next",
-  "version": "2.0.7",
+  "version": "2.0.8",
   "description": "KoaJS HTTP Request/Response/Error JSON format logger",
   "repository": {
     "type": "git",
